@@ -1,12 +1,15 @@
 
 
-.PHONY: all clean
+.PHONY: all clean debug test 
 
 all:
-	g++ -std=c++11 rope.cpp -o rope.tsk
+	g++ -std=c++11 rope.cpp main.cpp -o rope.tsk
 
 debug:
-	g++ -std=c++11 -g rope.cpp -o rope.tsk
+	g++ -std=c++11 -g rope.cpp main.cpp -o rope.tsk
+
+test: debug
+	./rope.tsk
 
 clean:
 	rm -f *.o
