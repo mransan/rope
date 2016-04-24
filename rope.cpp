@@ -1,23 +1,27 @@
 #include "rope.h"
+#include <cassert>
 
 namespace rope {
 
 t::t(std::string&& s) 
 : _tag(tag::STRING), 
   _height(1), 
-  _size(s.size()) {
+  _size(s.size()),
+  _parent(nullptr) { 
 
-    new (&_string) std::string(std::move(s));
+  new (&_string) std::string(std::move(s));
 }
 
 t::t(t&& lhs, 
      t&& rhs) 
 : _tag(tag::APPEND), 
   _height(std::max(lhs._height, rhs._height) + 1), 
-  _size(lhs._size + rhs._size) {
+  _size(lhs._size + rhs._size), 
+  _parent(nullptr) {
 
-    new (&_append) t::append(std::move(lhs), 
-                             std::move(rhs));
+  new (&_append) t::append(std::move(lhs), 
+                           std::move(rhs), 
+                           this);
 }
   
 t::t(t&& copy) {
@@ -32,6 +36,7 @@ t::t(t&& copy) {
   _tag    = copy._tag;
   _size   = copy._size;
   _height = copy._height;
+  _parent = copy._parent;
 }
 
 t::~t() {
@@ -84,11 +89,12 @@ t& t::append_string(std::string&& s) {
     case tag::STRING:{
       
       append a(std::move(*this), 
-               t(std::move(s)));
+               t(std::move(s)), 
+               this);
       
       using std::string;
       _string.~string();
-      new (&_append) append(std::move(a)); 
+      new (&_append) append(std::move(a), this); 
       _tag    = tag::APPEND;
 
     } break;
@@ -99,10 +105,11 @@ t& t::append_string(std::string&& s) {
         // rebalance on the other side.
         
         append a(std::move(*this), 
-                 t(std::move(s)));
+                 t(std::move(s)), 
+                 this);
       
         _append.~append();
-        new (&_append) append(std::move(a)); 
+        new (&_append) append(std::move(a), this); 
         _tag    = tag::APPEND;
       }
       else {
@@ -119,28 +126,71 @@ t& t::append_string(std::string&& s) {
 
     return *this;
 }
+
+t* t::left_most_string() {
+  if(_tag == tag::STRING) {
+    return this;
+  }
+  else {
+    return _append._lhs->left_most_string();
+  }
+}
   
 iterator t::begin() {
-  return iterator(this, 0);
+  return iterator(this->left_most_string(), 0);
 }
 
 iterator t::end() {
-  return iterator(this, _size);
+  return iterator();
 }
 
 const_iterator t::begin() const {
-  return const_iterator(this, 0);
+  t* self = const_cast<t*>(this);
+  return const_iterator(self->left_most_string(), 0);
 }
 
 const_iterator t::end() const {
-  return const_iterator(this, _size);
+  return const_iterator();
 }
 
 t::append::append(t&& lhs, 
-                  t&& rhs)
+                  t&& rhs, 
+                  t*   self)
 : _lhs(new t(std::move(lhs)))
  ,_rhs(new t(std::move(rhs))) { 
 
+  _lhs->_parent = self;
+  _rhs->_parent = self;
+}
+
+t::append::append(append&& copy, t* self)
+: _lhs(std::move(copy._lhs)), 
+  _rhs(std::move(copy._rhs)) {
+
+  _lhs->_parent = self;
+  _rhs->_parent = self;
+}
+
+t * t::next_string_leaf() {
+  if(_parent == nullptr) {
+    // root node
+    return nullptr;
+  }
+
+  assert(_parent->_tag == tag::APPEND); 
+    // Check invariant.
+
+  bool am_i_lhs = _parent->_append._lhs.get() == this; 
+  if(am_i_lhs) {
+    // I am the lhs side node of my parent, 
+    // the next one is my sibling the rhs. 
+    return _parent->_append._rhs.get (); 
+  }
+
+  // I am the rhs side of my parent, we need to 
+  // go up a level and do this again to reach cousins/uncles/
+
+  return _parent->next_string_leaf();
 }
 
 // Iterators
@@ -152,10 +202,13 @@ iterator::iterator()
 {}
 
 iterator::iterator(t* rope_ptr, 
-                      std::size_t index)
+                   std::size_t index)
 : _ptr(rope_ptr), 
   _index(index)
-{ }
+{ 
+  assert(_ptr != nullptr); 
+  assert(_ptr->_tag == t::tag::STRING);
+}
 
 iterator::iterator(iterator const& copy)
 : _ptr(copy._ptr), 
@@ -164,18 +217,30 @@ iterator::iterator(iterator const& copy)
 }
 
 iterator::reference iterator::operator*() {
-  return _ptr->operator[](_index);
+  assert(_ptr != nullptr); 
+  assert(_ptr->_tag == t::tag::STRING);
+  return _ptr->_string[_index];
 }
 
 iterator& iterator::operator++() {
+  assert(_ptr->_tag == t::tag::STRING);
   ++_index;
+  if(_index == _ptr->_string.size()) {
+      _ptr   = _ptr->next_string_leaf();
+      _index = 0; 
+  };
   return *this;
 }
 
 iterator iterator::operator++(int) {
-    iterator tmp(*this); 
-    ++_index;
-    return tmp;
+  iterator tmp(*this); 
+  assert(_ptr->_tag == t::tag::STRING);
+  ++_index;
+  if(_index == _ptr->_string.size()) {
+      _ptr   = _ptr->next_string_leaf();
+      _index = 0; 
+  };
+  return tmp;
 }
 
 bool iterator::operator==(iterator const& rhs) const {
@@ -188,44 +253,40 @@ bool iterator::operator!=(iterator const& rhs) const {
 }
 
 const_iterator::const_iterator() 
-: _ptr(nullptr), 
-  _index(0)
+: _i() 
 {}
 
 const_iterator::const_iterator(t const * rope_ptr, 
                                std::size_t index)
-: _ptr(rope_ptr), 
-  _index(index)
+: _i(const_cast<t*>(rope_ptr), index)
 { }
 
 const_iterator::const_iterator(const_iterator const& copy)
-: _ptr(copy._ptr), 
-  _index(copy._index)
+: _i(copy._i)
 {
 }
 
 const_iterator::value_type const_iterator::operator*() {
-  return _ptr->operator[](_index);
+  return *_i;
 }
 
 const_iterator& const_iterator::operator++() {
-  ++_index;
+  ++_i;
   return *this;
 }
 
 const_iterator const_iterator::operator++(int) {
     const_iterator tmp(*this); 
-    ++_index;
+    ++_i;
     return tmp;
 }
 
 bool const_iterator::operator==(const_iterator const& rhs) const {
-    return _ptr   == rhs._ptr && 
-           _index == rhs._index;
+    return _i == rhs._i;
 }
 
 bool const_iterator::operator!=(const_iterator const& rhs) const {
-    return !this->operator==(rhs);
+    return _i != rhs._i;
 }
 
 
