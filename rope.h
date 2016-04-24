@@ -55,10 +55,13 @@ public:
   // ---------
   
   iterator begin(); 
+
   iterator end(); 
 
   const_iterator begin() const;
+
   const_iterator end() const;
+
 private:
 
   enum class tag {
@@ -68,7 +71,10 @@ private:
 
   struct append {
     append(t&& lhs, 
-           t&& rhs);
+           t&& rhs, 
+           t*  self);
+
+    append(append&& copy, t* self);
 
     std::unique_ptr<t> _lhs; 
     std::unique_ptr<t> _rhs;
@@ -78,10 +84,20 @@ private:
     std::string _string; 
     append      _append;
   };
+
+private:
+  friend class iterator;
+  t* left_most_string();
+  t* next_string_leaf(); 
+    // return nullptr if no more leaf string 
+    // nodes
   
-  tag _tag;
+private:
+
+  tag         _tag;
   std::size_t _size;
   std::size_t _height;
+  t*          _parent; // nullptr if Root node.
 };
 
 class iterator 
@@ -124,8 +140,7 @@ public:
   bool operator!=(const_iterator const& rhs) const; 
 
 private:
-  t const * _ptr;
-  std::size_t _index;
+  ::rope::iterator _i;
 };
 
 } // namespace rope
