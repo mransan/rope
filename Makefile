@@ -1,6 +1,5 @@
 
-
-.PHONY: all clean debug test 
+.PHONY: all clean debug test test.valgrind
 
 all:
 	g++ -std=c++11 rope.cpp main.cpp -o rope.tsk
@@ -10,6 +9,9 @@ debug:
 
 test: debug
 	./rope.tsk
+
+test.valgrind: debug
+	valgrind --leak-check=full ./rope.tsk
 
 clean:
 	rm -f *.o
