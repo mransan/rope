@@ -90,5 +90,9 @@ int main () {
                 });
   assert("abcd" == s6_str);
 
+  rope::t empty("");
+  assert(empty.size() == 0);
+  assert(empty.begin() == empty.end());
+
   return 0;
 }
