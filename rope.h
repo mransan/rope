@@ -118,13 +118,18 @@ private:
     append(append&& copy, 
            t* self);
 
-    std::unique_ptr<t> _lhs; 
-    std::unique_ptr<t> _rhs;
+    append(append&& copy) = delete;
+    append(append const& copy) = delete;
+    append() = delete;
+      // Disabled constructor
+
+    std::unique_ptr<t> lhs_; 
+    std::unique_ptr<t> rhs_;
   };
 
   union {
-    std::string _string; 
-    append      _append;
+    std::string string_; 
+    append      append_;
   };
 
 private:
@@ -138,6 +143,15 @@ private:
   // @return nullptr if no more leaf string 
   // nodes
   t* next_string_leaf(); 
+
+  // @brief Check data structure invariant
+  bool check_invariant() const;
+  
+  struct assert_invariant {
+    assert_invariant(t const&);
+    ~assert_invariant();
+    t const& rope_;
+  };
   
 private:
 

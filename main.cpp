@@ -80,6 +80,7 @@ int main () {
                 });
   assert(s5_str == "ab");
 
+
   std::string s6_str;
   rope::t const s6(rope::t(std::string("ab")), 
                    rope::t(std::string("cd"))); 
