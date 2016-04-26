@@ -1,9 +1,9 @@
-#ifndef __MAXMM__ROPE__H__
-#define __MAXMM__ROPE__H__
+#if !defined(__MAXMM__ROPE__H__)
+#  define __MAXMM__ROPE__H__
 
-#include <string>
-#include <memory>
-#include <iterator>
+#  include <string>
+#  include <memory>
+#  include <iterator>
 
 namespace maxmm {
 
@@ -206,4 +206,5 @@ private:
 
 } // namespace maxmm
 
-#endif
+#endif // !defined(__MAXMM__ROPE__H__)
+

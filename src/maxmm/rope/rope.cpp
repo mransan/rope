@@ -1,15 +1,13 @@
-#include "rope.h"
+#include "maxmm/rope/rope.h"
 #include <cassert>
 
 #if defined(MAXMM_ROPE_DEBUG)
-  #include <iostream>
-  #define MAXMM_ASSERT(x) assert(x)
-  #define MAXMM_ASSERT_INVARIANT assert_invariant(*this);
-
+#  include <iostream>
+#  define MAXMM_ASSERT(x) assert(x)
+#  define MAXMM_ASSERT_INVARIANT assert_invariant(*this);
 #else
-  #define MAXMM_ASSERT(x) 
-  #define MAXMM_ASSERT_INVARIANT
-
+#  define MAXMM_ASSERT(x) 
+#  define MAXMM_ASSERT_INVARIANT
 #endif
 
 namespace maxmm {
