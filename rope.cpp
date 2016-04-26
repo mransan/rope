@@ -1,7 +1,7 @@
 #include "rope.h"
 #include <cassert>
 
-#if defined(MRANSAN_ROPE_DEBUG)
+#if defined(MAXMM_ROPE_DEBUG)
   #include <iostream>
   #define ASSERT(x) assert(x)
   #define ASSERT_INVARIANT assert_invariant(*this);
@@ -12,11 +12,9 @@
 
 #endif
 
+namespace maxmm {
 
-
-namespace rope {
-
-t::t(std::string const& s) 
+rope::rope(std::string const& s) 
 : tag_(tag::STRING), 
   height_(1), 
   size_(s.size()),
@@ -26,7 +24,7 @@ t::t(std::string const& s)
   ASSERT_INVARIANT;
 }
 
-t::t(std::string&& s) 
+rope::rope(std::string&& s) 
 : tag_(tag::STRING), 
   height_(1), 
   size_(s.size()),
@@ -36,20 +34,20 @@ t::t(std::string&& s)
   ASSERT_INVARIANT;
 }
 
-t::t(t&& lhs, 
-     t&& rhs) 
+rope::rope(rope&& lhs, 
+           rope&& rhs) 
 : tag_(tag::APPEND), 
   height_(std::max(lhs.height_, rhs.height_) + 1), 
   size_(lhs.size_ + rhs.size_), 
   parent_(nullptr) {
 
-  new (&append_) t::append(std::move(lhs), 
-                           std::move(rhs), 
-                           this);
+  new (&append_) rope::append(std::move(lhs), 
+                              std::move(rhs), 
+                              this);
   ASSERT_INVARIANT;
 }
   
-t::t(t&& copy) {
+rope::rope(rope&& copy) {
     
   using std::string; 
 
@@ -68,13 +66,13 @@ t::t(t&& copy) {
   // It's intentional that we left the [copy] unmodified besides 
   // moving it's [string_] or [append_] data members. 
   //
-  // This property is needed and will be leveraged in the 
+  // This pmaxmmrty is needed and will be leveraged in the 
   // ::append_string() member function.
 
   ASSERT_INVARIANT;
 }
 
-t::~t() {
+rope::~rope() {
   using std::string; 
   switch(tag_) {
   case tag::STRING: string_.~string(); break;
@@ -82,17 +80,17 @@ t::~t() {
   }
 }
 
-std::size_t t::size() const {
+std::size_t rope::size() const {
   ASSERT_INVARIANT;
   return size_;
 }
 
-std::size_t t::height() const {
+std::size_t rope::height() const {
   ASSERT_INVARIANT;
   return height_;
 }
 
-char& t::operator[](std::size_t index) {
+char& rope::operator[](std::size_t index) {
   ASSERT_INVARIANT;
   switch(tag_) {
 
@@ -113,14 +111,14 @@ char& t::operator[](std::size_t index) {
   } // switch
 }
 
-char t::operator[](std::size_t index) const {
+char rope::operator[](std::size_t index) const {
   ASSERT_INVARIANT;
 
-  t& self = const_cast<t&>(*this); 
+  rope& self = const_cast<rope&>(*this); 
   return self[index];
 }
 
-t& t::append_string(std::string&& s) {
+rope& rope::append_string(std::string&& s) {
   ASSERT_INVARIANT;
 
   std::size_t ssize_ = s.size();
@@ -130,7 +128,7 @@ t& t::append_string(std::string&& s) {
   case tag::STRING:{
     
     append a(std::move(*this), 
-             t(std::move(s)), 
+             rope(std::move(s)), 
              this);
     
     using std::string;
@@ -146,7 +144,7 @@ t& t::append_string(std::string&& s) {
       // rebalance on the other side.
       
       append a(std::move(*this), 
-               t(std::move(s)), 
+               rope(std::move(s)), 
                this);
     
       append_.~append();
@@ -167,19 +165,21 @@ t& t::append_string(std::string&& s) {
 
   // -- Note -- 
   //
-  // The [parent_] is unchanged due to the property of the 
-  // move constructor [t::(t&& copy)] which does not modify the data
+  // The [parent_] is unchanged due to the pmaxmmrty of the 
+  // move constructor [rope::(t&& copy)] which does not modify the data
   // members. So even if we called [std::move(this)] above, the 
   // [parent_] is still valid.
 
   return *this;
 }
 
-t& t::append_string(std::string const& rhs) {
+rope& rope::append_string(std::string const& rhs) {
   return this->append_string(std::string(rhs));
 }
 
-t* t::left_most_string() {
+rope* rope::left_most_string() {
+  ASSERT_INVARIANT;
+
   if(tag_ == tag::STRING) {
     return this;
   }
@@ -188,7 +188,7 @@ t* t::left_most_string() {
   }
 }
   
-iterator t::begin() {
+iterator rope::begin() {
   ASSERT_INVARIANT;
 
   if(size_ == 0) {
@@ -199,41 +199,41 @@ iterator t::begin() {
   }
 }
 
-iterator t::end() {
+iterator rope::end() {
   ASSERT_INVARIANT;
 
   return iterator();
 }
 
-const_iterator t::begin() const {
+const_iterator rope::begin() const {
   ASSERT_INVARIANT;
 
   if(size_ == 0) {
     return const_iterator();
   }
   else {
-    t* self = const_cast<t*>(this);
+    rope* self = const_cast<rope*>(this);
     return const_iterator(self->left_most_string(), 0);
   }
 }
 
-const_iterator t::end() const {
+const_iterator rope::end() const {
   ASSERT_INVARIANT;
 
   return const_iterator();
 }
 
-t::append::append(t&& lhs, 
-                  t&& rhs, 
-                  t*   self)
-: lhs_(new t(std::move(lhs)))
- ,rhs_(new t(std::move(rhs))) { 
+rope::append::append(rope&& lhs, 
+                     rope&& rhs, 
+                     rope*   self)
+: lhs_(new rope(std::move(lhs)))
+ ,rhs_(new rope(std::move(rhs))) { 
 
   lhs_->parent_ = self;
   rhs_->parent_ = self;
 }
 
-t::append::append(append&& copy, t* self)
+rope::append::append(append&& copy, rope* self)
 : lhs_(std::move(copy.lhs_)), 
   rhs_(std::move(copy.rhs_)) {
 
@@ -241,7 +241,9 @@ t::append::append(append&& copy, t* self)
   rhs_->parent_ = self;
 }
 
-t* t::next_string_leaf() {
+rope* rope::next_string_leaf() {
+  ASSERT_INVARIANT;
+
   if(parent_ == nullptr) {
     // root node
     return nullptr;
@@ -263,49 +265,53 @@ t* t::next_string_leaf() {
   return parent_->next_string_leaf();
 }
   
-bool t::check_invariant() const {
+bool rope::check_invariant() const {
 
-#define MRANSAN_CHECK(x) \
-  if(! (x)) {\
-    std::cerr << "assertion failed: " << #x << std::endl;\
-    return false;\
-  }
+#if defined(MAXMM_ROPE_DEBUG)
+  #define MAXMM_CHECK(x) \
+    if(! (x)) {\
+      std::cerr << "assertion failed: " << #x << std::endl;\
+      return false;\
+    }
+#else
+  #define MAXMM_CHECK(x)
+#endif
   
-  MRANSAN_CHECK(size_ >= 0);
+  MAXMM_CHECK(size_ >= 0);
 
   if(tag_ == tag::STRING) {
-    MRANSAN_CHECK(size_ == string_.size());
-    MRANSAN_CHECK(height_ == 1);
+    MAXMM_CHECK(size_ == string_.size());
+    MAXMM_CHECK(height_ == 1);
   }
 
   if(tag_ == tag::APPEND) {
     
     // an append node is always created with 2 valid 
-    // sub ropes.
-    MRANSAN_CHECK(append_.lhs_.get() != nullptr);
-    MRANSAN_CHECK(append_.rhs_.get() != nullptr);
+    // sub maxmms.
+    MAXMM_CHECK(append_.lhs_.get() != nullptr);
+    MAXMM_CHECK(append_.rhs_.get() != nullptr);
 
-    t& lhs = *append_.lhs_;
-    t& rhs = *append_.rhs_;
+    rope& lhs = *append_.lhs_;
+    rope& rhs = *append_.rhs_;
 
-    // the size of an append is the sum of its sub ropes' size.
-    MRANSAN_CHECK(size_ == lhs.size_ + rhs.size_);
+    // the size of an append is the sum of its sub maxmms' size.
+    MAXMM_CHECK(size_ == lhs.size_ + rhs.size_);
 
     // the height of an append is one more than the maximum height of 
-    // its sub ropes.
-    MRANSAN_CHECK(height_ == std::max(lhs.height_, rhs.height_) + 1);
+    // its sub maxmms.
+    MAXMM_CHECK(height_ == std::max(lhs.height_, rhs.height_) + 1);
 
-    // the sub ropes parent_ field must point to the parent append rope.
-    MRANSAN_CHECK(lhs.parent_ == this);
-    MRANSAN_CHECK(rhs.parent_ == this);
+    // the sub maxmms parent_ field must point to the parent append maxmm.
+    MAXMM_CHECK(lhs.parent_ == this);
+    MAXMM_CHECK(rhs.parent_ == this);
   }
 
-#undef MRANSAN_CHECK 
+#undef MAXMM_CHECK 
 
   return true;
 }
   
-t::assert_invariant::assert_invariant(t const& rope)
+rope::assert_invariant::assert_invariant(rope const& rope)
 : rope_(rope) {
 
   if(!rope_.check_invariant()) {
@@ -313,7 +319,7 @@ t::assert_invariant::assert_invariant(t const& rope)
   }
 }
 
-t::assert_invariant::~assert_invariant() {
+rope::assert_invariant::~assert_invariant() {
   assert(rope_.check_invariant());
 }
 
@@ -325,13 +331,13 @@ iterator::iterator()
   _index(0)
 {}
 
-iterator::iterator(t* rope_ptr, 
+iterator::iterator(rope* maxmm_ptr, 
                    std::size_t index)
-: _ptr(rope_ptr), 
+: _ptr(maxmm_ptr), 
   _index(index)
 { 
   ASSERT(_ptr != nullptr); 
-  ASSERT(_ptr->tag_ == t::tag::STRING);
+  ASSERT(_ptr->tag_ == rope::tag::STRING);
 }
 
 iterator::iterator(iterator const& copy)
@@ -342,12 +348,12 @@ iterator::iterator(iterator const& copy)
 
 iterator::reference iterator::operator*() {
   ASSERT(_ptr != nullptr); 
-  ASSERT(_ptr->tag_ == t::tag::STRING);
+  ASSERT(_ptr->tag_ == rope::tag::STRING);
   return _ptr->string_[_index];
 }
 
 iterator& iterator::operator++() {
-  ASSERT(_ptr->tag_ == t::tag::STRING);
+  ASSERT(_ptr->tag_ == rope::tag::STRING);
   ++_index;
   if(_index == _ptr->string_.size()) {
       _ptr   = _ptr->next_string_leaf();
@@ -358,7 +364,7 @@ iterator& iterator::operator++() {
 
 iterator iterator::operator++(int) {
   iterator tmp(*this); 
-  ASSERT(_ptr->tag_ == t::tag::STRING);
+  ASSERT(_ptr->tag_ == rope::tag::STRING);
   ++_index;
   if(_index == _ptr->string_.size()) {
       _ptr   = _ptr->next_string_leaf();
@@ -380,9 +386,9 @@ const_iterator::const_iterator()
 : _i() 
 {}
 
-const_iterator::const_iterator(t const * rope_ptr, 
+const_iterator::const_iterator(rope const* ptr, 
                                std::size_t index)
-: _i(const_cast<t*>(rope_ptr), index)
+: _i(const_cast<rope*>(ptr), index)
 { }
 
 const_iterator::const_iterator(const_iterator const& copy)
@@ -412,4 +418,7 @@ bool const_iterator::operator!=(const_iterator const& rhs) const {
     return _i != rhs._i;
 }
 
-} // namespace rope
+} // namespace maxmm
+
+#undef ASSERT
+#undef ASSERT_INVARIANT
