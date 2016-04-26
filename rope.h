@@ -1,13 +1,13 @@
-#ifndef __MRANSAN__ROPE__H__
-#define __MRANSAN__ROPE__H__
+#ifndef __MAXMM__ROPE__H__
+#define __MAXMM__ROPE__H__
 
 #include <string>
 #include <memory>
 #include <iterator>
 
-namespace rope {
+namespace maxmm {
 
-class t; 
+class rope; 
 class iterator;
 class const_iterator;
 
@@ -15,49 +15,49 @@ class const_iterator;
 // of the Rope data structure for std::string. 
 //
 // https://en.wikipedia.org/wiki/Rope_(data_structure) 
-class t {
+class rope {
 
 public:
 
   // Creators
   // --------
 
-  // @brief Initialize the rope by moving a string.
+  // @brief Initialize the maxmm by moving a string.
   //
   // Most recommended constructor since no memory allocation
   // will be performed.
-  explicit t(std::string&& s);
+  explicit rope(std::string&& s);
 
-  // @brief Initialize the rope by copying a string. 
+  // @brief Initialize the maxmm by copying a string. 
   //
   // A memory allocation + copy is done for the length 
   // of the string [s].
-  explicit t(std::string const& s);
+  explicit rope(std::string const& s);
 
-  // @bief Initialize the rope to be an append node 
-  // of 2 sub ropes.
-  t(t&& lhs, 
-    t&& rhs);
+  // @bief Initialize the maxmm to be an append node 
+  // of 2 sub maxmms.
+  rope(rope&& lhs, 
+       rope&& rhs);
 
   // @brief Move Constructor
-  t(t&& copy);
+  rope(rope&& copy);
 
   // Destructors 
   // -----------
 
   // @brief Destructor
-  ~t();
+  ~rope();
 
   // Accessors
   // ---------
 
-  // @brief total size of the rope string 
+  // @brief total size of the maxmm string 
   //
   // It's the sum of all the sub strings (ie leaves). 
   std::size_t size() const;
 
-  // @brief return the height of the rope. 
-  // - Internal height of the rope tree data structure
+  // @brief return the height of the maxmm. 
+  // - Internal height of the maxmm tree data structure
   // - Only used for testing
   std::size_t height() const;
 
@@ -70,30 +70,30 @@ public:
   // Modifiers
   // ---------
   
-  // @brief move and append a string to the rope. 
-  t& append_string(std::string&& rhs); 
+  // @brief move and append a string to the maxmm. 
+  rope& append_string(std::string&& rhs); 
   
-  // @brief append a string to the rope. 
+  // @brief append a string to the maxmm. 
   //
   // allocation+copy will be made.
-  t& append_string(std::string const& rhs); 
+  rope& append_string(std::string const& rhs); 
 
   // Iterators
   // ---------
   
-  // @brief iterator to the begining of the rope. 
+  // @brief iterator to the begining of the maxmm. 
   iterator begin(); 
 
-  // @brief iterator to the end of the rope. 
+  // @brief iterator to the end of the maxmm. 
   //
   // dereferencing this iterator value is undefined
   // behavior.
   iterator end(); 
 
-  // @brief const iterator to the begining of the rope. 
+  // @brief const iterator to the begining of the maxmm. 
   const_iterator begin() const;
 
-  // @brief const iterator to the end of the rope. 
+  // @brief const iterator to the end of the maxmm. 
   //
   // dereferencing this iterator value is undefined
   // behavior.
@@ -111,20 +111,20 @@ private:
   };
 
   struct append {
-    append(t&& lhs, 
-           t&& rhs, 
-           t*  self);
+    append(rope&& lhs, 
+           rope&& rhs, 
+           rope*  self);
 
     append(append&& copy, 
-           t* self);
+           rope* self);
 
     append(append&& copy) = delete;
     append(append const& copy) = delete;
     append() = delete;
       // Disabled constructor
 
-    std::unique_ptr<t> lhs_; 
-    std::unique_ptr<t> rhs_;
+    std::unique_ptr<rope> lhs_; 
+    std::unique_ptr<rope> rhs_;
   };
 
   union {
@@ -134,23 +134,23 @@ private:
 
 private:
 
-  // @brief return the left most string of the rope data structure. 
-  t* left_most_string();
+  // @brief return the left most string of the maxmm data structure. 
+  rope* left_most_string();
 
-  // @brief return the next string when traversing the rope in a depth
+  // @brief return the next string when traversing the maxmm in a depth
   // first left to right manner. 
   //
   // @return nullptr if no more leaf string 
   // nodes
-  t* next_string_leaf(); 
+  rope* next_string_leaf(); 
 
   // @brief Check data structure invariant
   bool check_invariant() const;
   
   struct assert_invariant {
-    assert_invariant(t const&);
+    assert_invariant(rope const&);
     ~assert_invariant();
-    t const& rope_;
+    rope const& rope_;
   };
   
 private:
@@ -158,7 +158,7 @@ private:
   tag         tag_;
   std::size_t size_;
   std::size_t height_;
-  t*          parent_; // nullptr if Root node.
+  rope*       parent_; // nullptr if Root node.
 };
 
 class iterator 
@@ -167,7 +167,7 @@ class iterator
 public:
   
   iterator(); 
-  iterator(t* rope_ptr, 
+  iterator(rope* maxmm_ptr, 
            std::size_t index); 
   iterator(iterator const& copy);
 
@@ -179,7 +179,7 @@ public:
   bool operator!=(iterator const& rhs) const; 
 
 private:
-  t* _ptr;
+  rope* _ptr;
   std::size_t _index;
 };
 
@@ -189,7 +189,7 @@ class const_iterator
 public:
   
   const_iterator(); 
-  const_iterator(t const * rope_ptr, 
+  const_iterator(rope const * maxmm_ptr, 
                  std::size_t index); 
   const_iterator(const_iterator const& copy);
 
@@ -201,9 +201,9 @@ public:
   bool operator!=(const_iterator const& rhs) const; 
 
 private:
-  ::rope::iterator _i;
+  ::maxmm::iterator _i;
 };
 
-} // namespace rope
+} // namespace maxmm
 
 #endif

@@ -5,19 +5,19 @@
 #include <algorithm>
 
 int main () {
-  rope::t s1(std::string("123"));
+  maxmm::rope s1(std::string("123"));
   assert(s1.size() == 3);
   assert(s1[0] == '1');
   assert(s1[1] == '2');
   assert(s1[2] == '3');
   
-  rope::t s2(std::string("456"));
+  maxmm::rope s2(std::string("456"));
   assert(s2.size() == 3);
   assert(s2[0] == '4');
   assert(s2[1] == '5');
   assert(s2[2] == '6');
 
-  rope::t s3(std::move(s1), std::move(s2));
+  maxmm::rope s3(std::move(s1), std::move(s2));
   assert(s3.size() == 6);
   assert(s3[0] == '1');
   assert(s3[1] == '2');
@@ -34,7 +34,7 @@ int main () {
   assert(s3[7] == '8');
   assert(s3[8] == '9');
 
-  rope::t s4(std::string("a")); 
+  maxmm::rope s4(std::string("a")); 
 
   assert(s4.height() == 1); 
 
@@ -63,35 +63,35 @@ int main () {
   assert(s4[7] == 'h');
 
 
-  rope::t s5(std::string("ab")); 
+  maxmm::rope s5(std::string("ab")); 
   s5[1] = 'a';
   assert('a' == s5[1]);
   s5[1] = 'b';
 
-  rope::iterator i = s5.begin(); 
+  maxmm::iterator i = s5.begin(); 
   assert('a' == *i);
   assert('b' == *++i);
 
   std::string s5_str;
   std::for_each(s5.begin(), 
                 s5.end(), 
-                [&s5_str](rope::iterator::reference c) {
+                [&s5_str](maxmm::iterator::reference c) {
                   s5_str += c;
                 });
   assert(s5_str == "ab");
 
 
   std::string s6_str;
-  rope::t const s6(rope::t(std::string("ab")), 
-                   rope::t(std::string("cd"))); 
+  maxmm::rope const s6(maxmm::rope(std::string("ab")), 
+                   maxmm::rope(std::string("cd"))); 
   std::for_each(s6.begin(), 
                 s6.end(), 
-                [&s6_str](rope::const_iterator::value_type c) {
+                [&s6_str](maxmm::const_iterator::value_type c) {
                   s6_str += c;
                 });
   assert("abcd" == s6_str);
 
-  rope::t empty("");
+  maxmm::rope empty("");
   assert(empty.size() == 0);
   assert(empty.begin() == empty.end());
 
