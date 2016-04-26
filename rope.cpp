@@ -3,12 +3,12 @@
 
 #if defined(MAXMM_ROPE_DEBUG)
   #include <iostream>
-  #define ASSERT(x) assert(x)
-  #define ASSERT_INVARIANT assert_invariant(*this);
+  #define MAXMM_ASSERT(x) assert(x)
+  #define MAXMM_ASSERT_INVARIANT assert_invariant(*this);
 
 #else
-  #define ASSERT(x) 
-  #define ASSERT_INVARIANT
+  #define MAXMM_ASSERT(x) 
+  #define MAXMM_ASSERT_INVARIANT
 
 #endif
 
@@ -21,7 +21,7 @@ rope::rope(std::string const& s)
   parent_(nullptr) { 
  
   new (&string_) std::string(s);
-  ASSERT_INVARIANT;
+  MAXMM_ASSERT_INVARIANT;
 }
 
 rope::rope(std::string&& s) 
@@ -31,7 +31,7 @@ rope::rope(std::string&& s)
   parent_(nullptr) { 
 
   new (&string_) std::string(std::move(s));
-  ASSERT_INVARIANT;
+  MAXMM_ASSERT_INVARIANT;
 }
 
 rope::rope(rope&& lhs, 
@@ -44,7 +44,7 @@ rope::rope(rope&& lhs,
   new (&append_) rope::append(std::move(lhs), 
                               std::move(rhs), 
                               this);
-  ASSERT_INVARIANT;
+  MAXMM_ASSERT_INVARIANT;
 }
   
 rope::rope(rope&& copy) {
@@ -69,7 +69,7 @@ rope::rope(rope&& copy) {
   // This pmaxmmrty is needed and will be leveraged in the 
   // ::append_string() member function.
 
-  ASSERT_INVARIANT;
+  MAXMM_ASSERT_INVARIANT;
 }
 
 rope::~rope() {
@@ -81,17 +81,17 @@ rope::~rope() {
 }
 
 std::size_t rope::size() const {
-  ASSERT_INVARIANT;
+  MAXMM_ASSERT_INVARIANT;
   return size_;
 }
 
 std::size_t rope::height() const {
-  ASSERT_INVARIANT;
+  MAXMM_ASSERT_INVARIANT;
   return height_;
 }
 
 char& rope::operator[](std::size_t index) {
-  ASSERT_INVARIANT;
+  MAXMM_ASSERT_INVARIANT;
   switch(tag_) {
 
   case tag::STRING: {
@@ -112,28 +112,84 @@ char& rope::operator[](std::size_t index) {
 }
 
 char rope::operator[](std::size_t index) const {
-  ASSERT_INVARIANT;
+  MAXMM_ASSERT_INVARIANT;
 
   rope& self = const_cast<rope&>(*this); 
   return self[index];
 }
 
 rope& rope::append_string(std::string&& s) {
-  ASSERT_INVARIANT;
+  MAXMM_ASSERT_INVARIANT;
+  
+  // -- Note --
+  //
+  // The tree is kept almost balance since the height 
+  // of the tree might at most (log2 n + 1) rather than 
+  // log2n for a perfectly balance tree. 
+  //
+  // [1]
+  // The key part of the algorithm is when we insert 
+  // into a perfectly balance tree we create a new 
+  // tree with the perfectly balance tree on the left and the 
+  // appended string on the right
+  //    
+  //       x 
+  //     /   \
+  //    x     x     +   new string `e`
+  //   / \   / \
+  //  a   b c   d 
+  //  
+  //  will become 
+  //
+  //            x
+  //         /     \
+  //       x         e
+  //     /   \
+  //    x     x     
+  //   / \   / \
+  //  a   b c   d 
+  //
+  // 
+  // [2]
+  // The seond part ofthe algorithm is when we need to 
+  // append a string to a leaf node. For instance if you take the 
+  // above tree, for the next append you need to replace the 'e' rope
+  // of tag [tag::STRING] with an [tag::APPEND] in the following way: 
+  //
+  //            x
+  //         /     \
+  //       x         x
+  //     /   \      / \
+  //    x     x    e   f
+  //   / \   / \
+  //  a   b c   d 
+  //
+  // [3] 
+  // We then keep on following the same logic: the append node
+  // composed of [e] and [f] is the left most tree which is
+  // perfectly balanced and will therefore be replaced by an 
+  // imbalance tree following the same logic as in [1].
+
 
   std::size_t ssize_ = s.size();
 
   switch(tag_) {
 
   case tag::STRING:{
-    
-    append a(std::move(*this), 
-             rope(std::move(s)), 
-             this);
+     // Case [2] in notes above.
+
+    append tmp(std::move(*this), 
+               rope(std::move(s)), 
+               this);
+      // We create a tmp node by moving
+      // [this]. This intermediate step 
+      // is necessary since we need to properly 
+      // call the std::string destructor before 
+      // assigning the [append_] variable.
     
     using std::string;
     string_.~string();
-    new (&append_) append(std::move(a), this); 
+    new (&append_) append(std::move(tmp), this); 
     tag_    = tag::APPEND;
 
   } break;
@@ -141,14 +197,17 @@ rope& rope::append_string(std::string&& s) {
   case tag::APPEND:{
     
     if(append_.rhs_->height_ >= append_.lhs_->height_) {
-      // rebalance on the other side.
+      // Case [1] in the note
       
-      append a(std::move(*this), 
-               rope(std::move(s)), 
-               this);
+      append tmp(std::move(*this), 
+                 rope(std::move(s)), 
+                 this);
+        // Similarly we need to create a tmp variable
+        // with [this] data so that we can properly call
+        // the [append] destructor. 
     
       append_.~append();
-      new (&append_) append(std::move(a), this); 
+      new (&append_) append(std::move(tmp), this); 
       tag_    = tag::APPEND;
     }
     else {
@@ -178,7 +237,7 @@ rope& rope::append_string(std::string const& rhs) {
 }
 
 rope* rope::left_most_string() {
-  ASSERT_INVARIANT;
+  MAXMM_ASSERT_INVARIANT;
 
   if(tag_ == tag::STRING) {
     return this;
@@ -189,7 +248,7 @@ rope* rope::left_most_string() {
 }
   
 iterator rope::begin() {
-  ASSERT_INVARIANT;
+  MAXMM_ASSERT_INVARIANT;
 
   if(size_ == 0) {
     return iterator();
@@ -200,13 +259,13 @@ iterator rope::begin() {
 }
 
 iterator rope::end() {
-  ASSERT_INVARIANT;
+  MAXMM_ASSERT_INVARIANT;
 
   return iterator();
 }
 
 const_iterator rope::begin() const {
-  ASSERT_INVARIANT;
+  MAXMM_ASSERT_INVARIANT;
 
   if(size_ == 0) {
     return const_iterator();
@@ -218,7 +277,7 @@ const_iterator rope::begin() const {
 }
 
 const_iterator rope::end() const {
-  ASSERT_INVARIANT;
+  MAXMM_ASSERT_INVARIANT;
 
   return const_iterator();
 }
@@ -242,14 +301,14 @@ rope::append::append(append&& copy, rope* self)
 }
 
 rope* rope::next_string_leaf() {
-  ASSERT_INVARIANT;
+  MAXMM_ASSERT_INVARIANT;
 
   if(parent_ == nullptr) {
     // root node
     return nullptr;
   }
 
-  ASSERT(parent_->tag_ == tag::APPEND); 
+  MAXMM_ASSERT(parent_->tag_ == tag::APPEND); 
     // Check invariant.
 
   bool am_i_lhs = parent_->append_.lhs_.get() == this; 
@@ -336,8 +395,8 @@ iterator::iterator(rope* maxmm_ptr,
 : _ptr(maxmm_ptr), 
   _index(index)
 { 
-  ASSERT(_ptr != nullptr); 
-  ASSERT(_ptr->tag_ == rope::tag::STRING);
+  MAXMM_ASSERT(_ptr != nullptr); 
+  MAXMM_ASSERT(_ptr->tag_ == rope::tag::STRING);
 }
 
 iterator::iterator(iterator const& copy)
@@ -347,13 +406,13 @@ iterator::iterator(iterator const& copy)
 }
 
 iterator::reference iterator::operator*() {
-  ASSERT(_ptr != nullptr); 
-  ASSERT(_ptr->tag_ == rope::tag::STRING);
+  MAXMM_ASSERT(_ptr != nullptr); 
+  MAXMM_ASSERT(_ptr->tag_ == rope::tag::STRING);
   return _ptr->string_[_index];
 }
 
 iterator& iterator::operator++() {
-  ASSERT(_ptr->tag_ == rope::tag::STRING);
+  MAXMM_ASSERT(_ptr->tag_ == rope::tag::STRING);
   ++_index;
   if(_index == _ptr->string_.size()) {
       _ptr   = _ptr->next_string_leaf();
@@ -364,7 +423,7 @@ iterator& iterator::operator++() {
 
 iterator iterator::operator++(int) {
   iterator tmp(*this); 
-  ASSERT(_ptr->tag_ == rope::tag::STRING);
+  MAXMM_ASSERT(_ptr->tag_ == rope::tag::STRING);
   ++_index;
   if(_index == _ptr->string_.size()) {
       _ptr   = _ptr->next_string_leaf();
@@ -420,5 +479,5 @@ bool const_iterator::operator!=(const_iterator const& rhs) const {
 
 } // namespace maxmm
 
-#undef ASSERT
-#undef ASSERT_INVARIANT
+#undef MAXMM_ASSERT
+#undef MAXMM_ASSERT_INVARIANT
